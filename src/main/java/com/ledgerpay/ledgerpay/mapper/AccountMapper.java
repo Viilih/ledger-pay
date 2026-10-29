@@ -13,6 +13,7 @@ public class AccountMapper {
                 account.getId(),
                 account.getAccountNumber(),
                 account.getStatus(),
+                account.getCurrency(),
                 account.getCreatedAt(),
                 account.getUpdatedAt()
         );

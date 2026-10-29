@@ -44,7 +44,7 @@ jobs:
         java-version: '21'
         distribution: 'temurin'
         cache: maven
-    - name: Build with Maven
+    - name: Build and test
       env:
         DB_URL: jdbc:postgresql://localhost:5432/${{ vars.CI_DB_NAME }}
         DB_USERNAME: ${{ vars.CI_DB_USERNAME }}
