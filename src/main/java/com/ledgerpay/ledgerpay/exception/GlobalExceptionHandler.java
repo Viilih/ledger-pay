@@ -38,4 +38,15 @@ public class GlobalExceptionHandler {
         problem.setTitle("Account not found");
         return problem;
     }
+
+    @ExceptionHandler(InvalidTransactionException.class)
+    public ProblemDetail handleInvalidTransaction(InvalidTransactionException exception){
+        ProblemDetail problem = ProblemDetail.forStatusAndDetail(
+                HttpStatus.CONFLICT,
+                exception.getMessage()
+        );
+
+        problem.setTitle("Invalid transaction");
+        return problem;
+    }
 }
