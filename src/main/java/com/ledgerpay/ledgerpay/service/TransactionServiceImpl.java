@@ -5,11 +5,11 @@ import com.ledgerpay.ledgerpay.dto.TransferResponse;
 import com.ledgerpay.ledgerpay.exception.InvalidAccountStatusTransitionException;
 import com.ledgerpay.ledgerpay.exception.InvalidTransactionException;
 import com.ledgerpay.ledgerpay.mapper.TransactionMapper;
-import com.ledgerpay.ledgerpay.model.LedgerEntryDirection;
-import com.ledgerpay.ledgerpay.model.LedgerEntryEntity;
-import com.ledgerpay.ledgerpay.model.TransactionEntity;
+import com.ledgerpay.ledgerpay.model.*;
+import com.ledgerpay.ledgerpay.repository.AccountRepository;
 import com.ledgerpay.ledgerpay.repository.LedgerEntryRepository;
 import com.ledgerpay.ledgerpay.repository.TransactionRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Service;
 
 import javax.swing.text.html.Option;
@@ -21,12 +21,15 @@ public class TransactionServiceImpl implements TransactionService {
 
     private final TransactionRepository  transactionRepository;
     private final LedgerEntryRepository  ledgerEntryRepository;
+    private final AccountRepository      accountRepository;
 
     public TransactionServiceImpl(TransactionRepository transactionRepository,
-    LedgerEntryRepository ledgerEntryRepository
+    LedgerEntryRepository ledgerEntryRepository,
+                                  AccountRepository accountRepository
     ){
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
+        this.accountRepository = accountRepository;
     }
 
     public TransferResponse transfer(TransferRequest request) {
@@ -43,7 +46,7 @@ public class TransactionServiceImpl implements TransactionService {
             boolean validCurrency = isCurrencyOfMoneyTransferredValid(entries, request.currency());
 
             if (!validAmountOfMoney || !validCurrency){
-                throw new InvalidAccountStatusTransitionException(
+                throw new InvalidTransactionException(
                         "The transaction has inconsistent entries"
                 );
             }
@@ -60,6 +63,20 @@ public class TransactionServiceImpl implements TransactionService {
 
             return TransactionMapper.toResponse(transaction, debit, credit);
         }
+
+        if (!isAmountValid(request.amount())){
+            throw new InvalidTransactionException(
+                    "Transfer amount must be greater than zero."
+            );
+        }
+
+        validateAccounts(
+                request.sourceAccountId(),
+                request.destinationAccountId(),
+                request.currency()
+        );
+
+
         return null;
     }
 
@@ -105,6 +122,53 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         return true;
+    }
+
+    private boolean isAmountValid(Long amount){
+        return amount != null && amount > 0;
+    }
+
+    private void validateAccounts(
+            Long sourceAccountId,
+            Long destinationAccountId,
+            String currency
+    ) {
+        if (sourceAccountId == null || destinationAccountId == null) {
+            throw new InvalidTransactionException(
+                    "Source and destination accounts are required."
+            );
+        }
+
+        if (sourceAccountId.equals(destinationAccountId)) {
+            throw new InvalidTransactionException(
+                    "Source and destination accounts must be different."
+            );
+        }
+
+        AccountEntity source = accountRepository.findById(sourceAccountId)
+                .orElseThrow(() -> new InvalidTransactionException(
+                        "Source account not found."
+                ));
+
+        AccountEntity destination = accountRepository.findById(destinationAccountId)
+                .orElseThrow(() -> new InvalidTransactionException(
+                        "Destination account not found."
+                ));
+
+        if (source.getStatus() != AccountStatus.ACTIVE
+                || destination.getStatus() != AccountStatus.ACTIVE) {
+            throw new InvalidTransactionException(
+                    "Both accounts must be active."
+            );
+        }
+
+        if (currency == null
+                || !currency.equals(source.getCurrency())
+                || !currency.equals(destination.getCurrency())) {
+            throw new InvalidTransactionException(
+                    "Both accounts must use the requested currency."
+            );
+        }
     }
     // 1 - receive request with source account, destiny account, idempotency key e amount
 
