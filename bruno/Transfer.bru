@@ -1,0 +1,30 @@
+meta {
+  name: Transfer
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": 5,
+    "destinationAccountId": 6,
+    "currency": "BRL",
+    "amount": 1000,
+    "idempotencyKey": "86b768f8-640b-4225-ad06-d6ec621f894e",
+    "description": "Ana to Bruno"
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+}

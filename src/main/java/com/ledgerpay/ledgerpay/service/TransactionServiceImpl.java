@@ -11,6 +11,7 @@ import com.ledgerpay.ledgerpay.repository.LedgerEntryRepository;
 import com.ledgerpay.ledgerpay.repository.TransactionRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.swing.text.html.Option;
 import java.util.List;
@@ -32,6 +33,7 @@ public class TransactionServiceImpl implements TransactionService {
         this.accountRepository = accountRepository;
     }
 
+    @Transactional
     public TransferResponse transfer(TransferRequest request) {
 
         // Search for idempotency key and return the current Transaction
@@ -70,14 +72,78 @@ public class TransactionServiceImpl implements TransactionService {
             );
         }
 
-        validateAccounts(
-                request.sourceAccountId(),
-                request.destinationAccountId(),
-                request.currency()
+        if (request.sourceAccountId() == null || request.destinationAccountId() == null) {
+            throw new InvalidTransactionException("Source and destination accounts are required.");
+        }
+
+        if (request.sourceAccountId().equals(request.destinationAccountId())) {
+            throw new InvalidTransactionException("Source and destination accounts must be different.");
+        }
+
+
+
+        // checar saldo da conta de origem
+
+        Long firstId = Math.min(request.sourceAccountId(), request.destinationAccountId());
+        Long secondId = Math.max(request.sourceAccountId(), request.destinationAccountId());
+
+        AccountEntity first = accountRepository.findByIdForUpdate(firstId).orElseThrow(
+                () -> new InvalidTransactionException("Account not found.")
         );
 
+        AccountEntity second = accountRepository.findByIdForUpdate(secondId).orElseThrow(
+                () -> new InvalidTransactionException("Account not found.")
+        );
 
-        return null;
+        AccountEntity source;
+        AccountEntity destination;
+
+        if (first.getId().equals(request.sourceAccountId())) {
+            source = first;
+            destination = second;
+        } else {
+            source = second;
+            destination = first;
+        }
+
+        validateAccounts(source, destination, request.currency());
+
+        Long balance = ledgerEntryRepository.sumBalanceByAccountId(source.getId());
+
+        if (balance < request.amount()){
+            throw new InvalidTransactionException(
+                    "Source account does not have enough balance"
+            );
+        }
+
+        TransactionEntity transaction = transactionRepository.save(
+                TransactionEntity.builder()
+                        .idempotencyKey(request.idempotencyKey())
+                        .description(request.description())
+                        .build()
+        );
+
+        LedgerEntryEntity debit = ledgerEntryRepository.save(
+                LedgerEntryEntity.builder()
+                        .transaction(transaction)
+                        .account(source)
+                        .direction(LedgerEntryDirection.DEBIT)
+                        .amount(request.amount())
+                        .currency(request.currency())
+                        .build()
+        );
+
+        LedgerEntryEntity credit = ledgerEntryRepository.save(
+                LedgerEntryEntity.builder()
+                        .transaction(transaction)
+                        .account(destination)
+                        .direction(LedgerEntryDirection.CREDIT)
+                        .amount(request.amount())
+                        .currency(request.currency())
+                        .build()
+        );
+
+        return TransactionMapper.toResponse(transaction, debit, credit);
     }
 
 
@@ -129,37 +195,13 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     private void validateAccounts(
-            Long sourceAccountId,
-            Long destinationAccountId,
+            AccountEntity source,
+            AccountEntity destination,
             String currency
     ) {
-        if (sourceAccountId == null || destinationAccountId == null) {
-            throw new InvalidTransactionException(
-                    "Source and destination accounts are required."
-            );
-        }
-
-        if (sourceAccountId.equals(destinationAccountId)) {
-            throw new InvalidTransactionException(
-                    "Source and destination accounts must be different."
-            );
-        }
-
-        AccountEntity source = accountRepository.findById(sourceAccountId)
-                .orElseThrow(() -> new InvalidTransactionException(
-                        "Source account not found."
-                ));
-
-        AccountEntity destination = accountRepository.findById(destinationAccountId)
-                .orElseThrow(() -> new InvalidTransactionException(
-                        "Destination account not found."
-                ));
-
         if (source.getStatus() != AccountStatus.ACTIVE
                 || destination.getStatus() != AccountStatus.ACTIVE) {
-            throw new InvalidTransactionException(
-                    "Both accounts must be active."
-            );
+            throw new InvalidTransactionException("Both accounts must be active.");
         }
 
         if (currency == null

@@ -1,0 +1,26 @@
+meta {
+  name: Create account
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/account
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountNumber": "ANA000000001",
+    "currency": "BRL"
+  }
+}
+
+vars:pre-request {
+  baseUrl: http://localhost:8080
+}

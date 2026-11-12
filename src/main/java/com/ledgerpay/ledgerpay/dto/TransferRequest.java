@@ -7,5 +7,6 @@ public record TransferRequest (
         Long destinationAccountId,
         String currency,
         Long amount,
-        UUID idempotencyKey
+        UUID idempotencyKey,
+        String description
 ){}
