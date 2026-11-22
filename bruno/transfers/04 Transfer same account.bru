@@ -1,0 +1,32 @@
+meta {
+  name: Transfer same account
+  type: http
+  seq: 13
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{sourceAccountId}},
+    "currency": "BRL",
+    "amount": 100,
+    "idempotencyKey": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa2",
+    "description": "same account"
+  }
+}
+
+tests {
+  test("rejects source equal to destination", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

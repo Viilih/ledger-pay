@@ -1,0 +1,41 @@
+meta {
+  name: Transfer retry same key
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 4000,
+    "idempotencyKey": "{{idempotencyKey}}",
+    "description": "Bruno to Ana"
+  }
+}
+
+docs {
+  Mesmo body da Transfer. Deve devolver o mesmo 200 sem gravar de novo.
+  Rode depois da Transfer, com a mesma `idempotencyKey` do ambiente.
+}
+
+tests {
+  test("replays the stored transfer", function () {
+    expect(res.getStatus()).to.equal(200);
+    const body = res.getBody();
+    expect(body.amount).to.equal(4000);
+    expect(body.idempotencyKey).to.equal(bru.getEnvVar("idempotencyKey"));
+    expect(body.status).to.equal("COMPLETED");
+  });
+}

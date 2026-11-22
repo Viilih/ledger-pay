@@ -1,0 +1,21 @@
+meta {
+  name: Block source account
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{baseUrl}}/account/{{sourceAccountId}}/status
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "status": "BLOCKED"
+  }
+}

@@ -1,0 +1,39 @@
+meta {
+  name: Transfer
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 4000,
+    "idempotencyKey": "{{idempotencyKey}}",
+    "description": "Bruno to Ana"
+  }
+}
+
+tests {
+  test("returns the posted transfer", function () {
+    expect(res.getStatus()).to.equal(200);
+    const body = res.getBody();
+    expect(body.sourceAccountId).to.equal(Number(bru.getEnvVar("sourceAccountId")));
+    expect(body.destinationAccountId).to.equal(Number(bru.getEnvVar("destinationAccountId")));
+    expect(body.amount).to.equal(4000);
+    expect(body.currency).to.equal("BRL");
+    expect(body.idempotencyKey).to.equal(bru.getEnvVar("idempotencyKey"));
+    expect(body.status).to.equal("COMPLETED");
+  });
+}

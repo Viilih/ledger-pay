@@ -1,0 +1,32 @@
+meta {
+  name: Transfer zero amount
+  type: http
+  seq: 14
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 0,
+    "idempotencyKey": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa3",
+    "description": "zero amount"
+  }
+}
+
+tests {
+  test("rejects amount that is not greater than zero", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

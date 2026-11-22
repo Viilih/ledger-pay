@@ -1,0 +1,36 @@
+meta {
+  name: Transfer blocked source
+  type: http
+  seq: 15
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 100,
+    "idempotencyKey": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa4",
+    "description": "blocked source"
+  }
+}
+
+docs {
+  Rode **Block source account** antes desta request.
+}
+
+tests {
+  test("rejects a transfer from a blocked account", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

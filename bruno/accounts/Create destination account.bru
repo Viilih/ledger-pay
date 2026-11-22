@@ -1,0 +1,28 @@
+meta {
+  name: Create destination account
+  type: http
+  seq: 2
+}
+
+post {
+  url: {{baseUrl}}/account
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountNumber": "DST000000001",
+    "currency": "BRL"
+  }
+}
+
+script:post-response {
+  if (res.getStatus() === 201) {
+    bru.setEnvVar("destinationAccountId", String(res.getBody().id));
+  }
+}

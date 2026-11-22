@@ -1,0 +1,32 @@
+meta {
+  name: Transfer insufficient funds
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 999999999,
+    "idempotencyKey": "aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaa1",
+    "description": "more than the source holds"
+  }
+}
+
+tests {
+  test("rejects when the source balance is too low", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}
