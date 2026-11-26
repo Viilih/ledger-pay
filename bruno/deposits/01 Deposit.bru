@@ -1,0 +1,37 @@
+meta {
+  name: Deposit
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{baseUrl}}/deposits
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountId": {{sourceAccountId}},
+    "currency": "BRL",
+    "amount": 10000,
+    "idempotencyKey": "{{depositIdempotencyKey}}",
+    "description": "Initial deposit"
+  }
+}
+
+tests {
+  test("returns the posted deposit", function () {
+    expect(res.getStatus()).to.equal(200);
+    const body = res.getBody();
+    expect(body.accountId).to.equal(Number(bru.getEnvVar("sourceAccountId")));
+    expect(body.amount).to.equal(10000);
+    expect(body.currency).to.equal("BRL");
+    expect(body.idempotencyKey).to.equal(bru.getEnvVar("depositIdempotencyKey"));
+    expect(body.status).to.equal("COMPLETED");
+  });
+}

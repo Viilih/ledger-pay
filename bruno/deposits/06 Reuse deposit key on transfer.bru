@@ -1,0 +1,36 @@
+meta {
+  name: Reuse deposit key on transfer
+  type: http
+  seq: 6
+}
+
+post {
+  url: {{baseUrl}}/transfers
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "sourceAccountId": {{sourceAccountId}},
+    "destinationAccountId": {{destinationAccountId}},
+    "currency": "BRL",
+    "amount": 1000,
+    "idempotencyKey": "{{depositIdempotencyKey}}",
+    "description": "cross-type idempotency key reuse"
+  }
+}
+
+docs {
+  Rode depois do **Deposit**. Envia a mesma `depositIdempotencyKey` no endpoint `/transfers` para garantir que o sistema rejeita reuso cruzado entre tipos de transação.
+}
+
+tests {
+  test("rejects reusing a deposit idempotency key on transfers", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

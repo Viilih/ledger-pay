@@ -6,11 +6,7 @@ import com.ledgerpay.ledgerpay.dto.TransferRequest;
 import com.ledgerpay.ledgerpay.dto.TransferResponse;
 import com.ledgerpay.ledgerpay.exception.InvalidTransactionException;
 import com.ledgerpay.ledgerpay.mapper.TransactionMapper;
-import com.ledgerpay.ledgerpay.model.AccountEntity;
-import com.ledgerpay.ledgerpay.model.AccountStatus;
-import com.ledgerpay.ledgerpay.model.LedgerEntryDirection;
-import com.ledgerpay.ledgerpay.model.LedgerEntryEntity;
-import com.ledgerpay.ledgerpay.model.TransactionEntity;
+import com.ledgerpay.ledgerpay.model.*;
 import com.ledgerpay.ledgerpay.repository.AccountRepository;
 import com.ledgerpay.ledgerpay.repository.LedgerEntryRepository;
 import com.ledgerpay.ledgerpay.repository.TransactionRepository;
@@ -71,6 +67,7 @@ public class TransferCreationServiceImpl {
                 TransactionEntity.builder()
                         .idempotencyKey(request.idempotencyKey())
                         .description(request.description())
+                        .type(TransactionType.TRANSFER)
                         .build()
         );
 
@@ -98,6 +95,10 @@ public class TransferCreationServiceImpl {
     }
 
     private void validateAccounts(AccountEntity source, AccountEntity destination, String currency) {
+
+        if (source.getType() != AccountType.USER || destination.getType() != AccountType.USER){
+            throw new InvalidTransactionException("One of the accounts has an invalid type");
+        }
         if (source.getStatus() != AccountStatus.ACTIVE
                 || destination.getStatus() != AccountStatus.ACTIVE) {
             throw new InvalidTransactionException("Both accounts must be active.");

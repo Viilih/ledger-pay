@@ -27,6 +27,10 @@ public class AccountEntity {
     @Enumerated(EnumType.STRING)
     private AccountStatus status;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private AccountType type;
+
     @Column(nullable = false, length = 3)
     private String currency;
 

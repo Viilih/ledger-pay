@@ -1,0 +1,35 @@
+meta {
+  name: Deposit wrong currency
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{baseUrl}}/deposits
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountId": {{sourceAccountId}},
+    "currency": "USD",
+    "amount": 5000,
+    "idempotencyKey": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb2",
+    "description": "wrong currency"
+  }
+}
+
+docs {
+  Envia moeda USD para uma conta criada em BRL. Deve rejeitar com 409.
+}
+
+tests {
+  test("rejects currency different from the account currency", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

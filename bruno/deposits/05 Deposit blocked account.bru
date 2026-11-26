@@ -1,0 +1,35 @@
+meta {
+  name: Deposit blocked account
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{baseUrl}}/deposits
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "accountId": {{sourceAccountId}},
+    "currency": "BRL",
+    "amount": 1000,
+    "idempotencyKey": "bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbb3",
+    "description": "blocked account"
+  }
+}
+
+docs {
+  Rode **Block source account** antes desta request.
+}
+
+tests {
+  test("rejects a deposit into a blocked account", function () {
+    expect(res.getStatus()).to.equal(409);
+  });
+}

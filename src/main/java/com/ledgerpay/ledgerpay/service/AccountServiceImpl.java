@@ -9,6 +9,7 @@ import com.ledgerpay.ledgerpay.exception.InvalidAccountStatusTransitionException
 import com.ledgerpay.ledgerpay.mapper.AccountMapper;
 import com.ledgerpay.ledgerpay.model.AccountEntity;
 import com.ledgerpay.ledgerpay.model.AccountStatus;
+import com.ledgerpay.ledgerpay.model.AccountType;
 import com.ledgerpay.ledgerpay.repository.AccountRepository;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +37,7 @@ public class AccountServiceImpl implements AccountService {
                 .accountNumber(createAccountDto.accountNumber())
                 .currency(createAccountDto.currency())
                 .status(AccountStatus.ACTIVE)
+                .type(AccountType.USER)
                 .build();
 
         AccountEntity savedAccount = repository.save(account);
@@ -47,6 +49,10 @@ public class AccountServiceImpl implements AccountService {
        AccountEntity account = repository.findById(id)
                .orElseThrow(() -> new AccountNotFoundWithIdException(String.
                        format("Account not found with id %s", id)));
+
+       if (account.getType() == AccountType.SYSTEM){
+           throw new InvalidAccountStatusTransitionException("You cannot change the status of a system account");
+       }
 
        if (account.getStatus() == AccountStatus.CLOSED
                && updateAccountStatusDto.status() != AccountStatus.CLOSED){
@@ -64,7 +70,11 @@ public class AccountServiceImpl implements AccountService {
                 .orElseThrow(() -> new AccountNotFoundWithIdException(String.
                         format("Account not found with id %s", id)));
 
+        if (account.getType() == AccountType.SYSTEM){
+            throw new InvalidAccountStatusTransitionException("You cannot close a system account");
+        }
+
         account.setStatus(AccountStatus.CLOSED);
-        AccountEntity savedAccount = repository.save(account);
+        repository.save(account);
     }
 }

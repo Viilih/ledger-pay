@@ -1,6 +1,7 @@
 package com.ledgerpay.ledgerpay.repository;
 
 import com.ledgerpay.ledgerpay.model.AccountEntity;
+import com.ledgerpay.ledgerpay.model.AccountType;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
@@ -16,4 +17,8 @@ public interface AccountRepository extends JpaRepository<AccountEntity, Long> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select a from AccountEntity a where a.id = :id")
     Optional<AccountEntity> findByIdForUpdate(@Param("id") Long id);
+
+    Optional<AccountEntity> findByTypeAndCurrency(AccountType type, String
+            currency);
+
 }

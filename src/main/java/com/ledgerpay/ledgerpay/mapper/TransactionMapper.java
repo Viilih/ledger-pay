@@ -1,5 +1,6 @@
 package com.ledgerpay.ledgerpay.mapper;
 
+import com.ledgerpay.ledgerpay.dto.DepositResponse;
 import com.ledgerpay.ledgerpay.dto.TransferResponse;
 import com.ledgerpay.ledgerpay.model.LedgerEntryEntity;
 import com.ledgerpay.ledgerpay.model.TransactionEntity;
@@ -14,6 +15,19 @@ public class TransactionMapper {
                 credit.getAccount().getId(),
                 debit.getCurrency(),
                 debit.getAmount(),
+                transaction.getIdempotencyKey(),
+                TransferStatus.COMPLETED
+        );
+    }
+
+    public static DepositResponse toDepositResponse(
+            TransactionEntity transaction,
+            LedgerEntryEntity credit
+    ) {
+        return new DepositResponse(
+                credit.getAccount().getId(),
+                credit.getCurrency(),
+                credit.getAmount(),
                 transaction.getIdempotencyKey(),
                 TransferStatus.COMPLETED
         );

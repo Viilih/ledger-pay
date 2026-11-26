@@ -1,11 +1,12 @@
 package com.ledgerpay.ledgerpay.service;
 
+import com.ledgerpay.ledgerpay.dto.DepositRequest;
+import com.ledgerpay.ledgerpay.dto.DepositResponse;
 import com.ledgerpay.ledgerpay.dto.TransferRequest;
 import com.ledgerpay.ledgerpay.dto.TransferResponse;
 import com.ledgerpay.ledgerpay.exception.InvalidTransactionException;
 import com.ledgerpay.ledgerpay.mapper.TransactionMapper;
 import com.ledgerpay.ledgerpay.model.*;
-import com.ledgerpay.ledgerpay.repository.AccountRepository;
 import com.ledgerpay.ledgerpay.repository.LedgerEntryRepository;
 import com.ledgerpay.ledgerpay.repository.TransactionRepository;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,19 +21,26 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository  transactionRepository;
     private final LedgerEntryRepository  ledgerEntryRepository;
     private final TransferCreationServiceImpl transferCreationService;
+    private final DepositCreationServiceImpl depositCreationService;
+
+
 
     public TransactionServiceImpl(TransactionRepository transactionRepository,
                                   LedgerEntryRepository ledgerEntryRepository,
-                                  AccountRepository accountRepository,
-                                  TransferCreationServiceImpl transferCreationService
-
+                                  TransferCreationServiceImpl transferCreationService,
+                                  DepositCreationServiceImpl depositCreationService
     ){
         this.transactionRepository = transactionRepository;
         this.ledgerEntryRepository = ledgerEntryRepository;
         this.transferCreationService = transferCreationService;
+        this.depositCreationService = depositCreationService;
     }
 
     public TransferResponse transfer(TransferRequest request) {
+
+        if (request.idempotencyKey() == null) {
+            throw new InvalidTransactionException("Idempotency key is required.");
+        }
 
         Optional<TransferResponse> existing = findExisting(request);
         if (existing.isPresent()) {
@@ -65,6 +73,40 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
 
+    public DepositResponse deposit(DepositRequest request){
+
+        if (request.idempotencyKey() == null) {
+            throw new InvalidTransactionException("Idempotency key is required.");
+        }
+
+        Optional<DepositResponse> existing = findExistingDeposit(request);
+        if (existing.isPresent()) {
+            return existing.get();
+        }
+
+        if (request.accountId() == null) {
+            throw new InvalidTransactionException("Account is required.");
+        }
+
+        if (!isAmountValid(request.amount())) {
+            throw new InvalidTransactionException(
+                    "Deposit amount must be greater than zero."
+            );
+        }
+
+        if (request.currency() == null) {
+            throw new InvalidTransactionException("Currency is required.");
+        }
+
+        try {
+            return depositCreationService.create(request);
+        } catch (DataIntegrityViolationException exception) {
+            return findExistingDeposit(request).orElseThrow(() -> exception);
+        }
+    }
+
+
+
      private Optional<TransferResponse> findExisting(TransferRequest request) {
         Optional<TransactionEntity> currentTransaction =
                 transactionRepository.findByIdempotencyKey(request.idempotencyKey());
@@ -74,6 +116,10 @@ public class TransactionServiceImpl implements TransactionService {
         }
 
         TransactionEntity transaction = currentTransaction.get();
+        if (transaction.getType() != TransactionType.TRANSFER) {
+            throw new InvalidTransactionException("Idempotency key belongs to a different transaction type.");
+        }
+
         List<LedgerEntryEntity> entries =
                 ledgerEntryRepository.findAllByTransaction_Id(transaction.getId());
 
@@ -95,6 +141,37 @@ public class TransactionServiceImpl implements TransactionService {
                 .orElseThrow(() -> new InvalidTransactionException("Credit entry not found"));
 
         return Optional.of(TransactionMapper.toResponse(transaction, debit, credit));
+    }
+
+    private Optional<DepositResponse> findExistingDeposit(DepositRequest request) {
+        Optional<TransactionEntity> currentTransaction =
+                transactionRepository.findByIdempotencyKey(request.idempotencyKey());
+
+        if (currentTransaction.isEmpty()) {
+            return Optional.empty();
+        }
+
+        TransactionEntity transaction = currentTransaction.get();
+        if (transaction.getType() != TransactionType.DEPOSIT) {
+            throw new InvalidTransactionException("Idempotency key belongs to a different transaction type.");
+        }
+
+        List<LedgerEntryEntity> entries =
+                ledgerEntryRepository.findAllByTransaction_Id(transaction.getId());
+
+        boolean validAmountOfMoney = isAmountOfMoneyTransferredValid(entries);
+        boolean validCurrency = isCurrencyOfMoneyTransferredValid(entries, request.currency());
+
+        if (!validAmountOfMoney || !validCurrency) {
+            throw new InvalidTransactionException("The transaction has inconsistent entries");
+        }
+
+        LedgerEntryEntity credit = entries.stream()
+                .filter(entry -> entry.getDirection() == LedgerEntryDirection.CREDIT)
+                .findFirst()
+                .orElseThrow(() -> new InvalidTransactionException("Credit entry not found"));
+
+        return Optional.of(TransactionMapper.toDepositResponse(transaction, credit));
     }
 
     private boolean isAmountOfMoneyTransferredValid(List<LedgerEntryEntity> entries){

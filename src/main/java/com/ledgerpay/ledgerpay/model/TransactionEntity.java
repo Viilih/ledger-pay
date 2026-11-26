@@ -24,14 +24,19 @@ public class TransactionEntity {
     @Column(name = "description")
     private String description;
 
+    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    private TransactionType type;
+
     @Column(name = "created_at", nullable = false)
     @Setter(AccessLevel.NONE)
     @CreationTimestamp
     private Instant createdAt;
 
     @Builder
-    public TransactionEntity(UUID idempotencyKey, String description) {
+    public TransactionEntity(UUID idempotencyKey, String description, TransactionType type) {
         this.idempotencyKey = idempotencyKey;
         this.description = description;
+        this.type = type;
     }
 }

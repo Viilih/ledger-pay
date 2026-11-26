@@ -1,0 +1,31 @@
+meta {
+  name: Como validar
+  type: default
+  seq: 0
+}
+
+docs {
+  # Como validar transfers
+
+  A app precisa estar em `http://localhost:8080`.
+
+  Conta nova nasce com saldo **0**. Sem um crédito no ledger, o primeiro
+  `POST /transfers` devolve saldo insuficiente. Use os ids já gravados no
+  ambiente `local` (`sourceAccountId` / `destinationAccountId`) se essas
+  contas já tiverem entries, ou rode **Create source/destination** e ajuste
+  os ids depois de um crédito no banco.
+
+  Ordem sugerida:
+
+  1. Create source account → grava `sourceAccountId` no ambiente
+  2. Create destination account → grava `destinationAccountId`
+  3. Transfer (happy path)
+  4. Transfer retry same key → mesmo body, mesmo 200, sem segunda linha no banco
+  5. Transfer insufficient funds
+  6. Transfer same account
+  7. Transfer zero amount
+  8. Block source + Transfer blocked source
+
+  Bruno não dispara duas requests no mesmo instante. A corrida da mesma
+  chave fica para um teste de integração com duas threads.
+}
